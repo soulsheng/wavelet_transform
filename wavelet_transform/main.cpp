@@ -1,4 +1,6 @@
+#include <iostream>
 #include <opencv.hpp>
+using namespace std;
 
 using namespace cv;
 #define THID_ERR_NONE 1
@@ -297,7 +299,7 @@ int main()
 	imshow("lena",gray);
 	Mat src;
 	gray.convertTo(src,CV_32F);
-	Mat dst=WDT(src,"haar",1);
+	Mat dst=WDT(src,"sym2",1);
 
 	/*namedWindow("WDT",1);
 	imshow("WDT",dst);*/
@@ -320,12 +322,93 @@ int main()
 		}
 	}
 
+#if 1
 	imwrite("top_left.jpg",In);
 	imwrite("top_right.jpg",D1);
 	imwrite("bottom_left.jpg",D2);
 	imwrite("bottom_right.jpg",D3);
+#endif
 
+	//计算直方图
+	//将灰度划分为256级
+	int gray_bins=256;
+	int histSize[]={gray_bins};
 
+	//灰度值从0-255
+	float grayRanges[]={0,255};
+	const float* ranges[]={grayRanges};
+	MatND hist;
+
+	int channels[]={0};
+
+	//计算灰度图的直方图
+	calcHist(&gray,1,channels,Mat(),hist,1,histSize,ranges,true,false);
+
+#if 0
+	double maxValue=0;
+	minMaxLoc(hist,0,&maxValue,0,0);
+
+	//画出直方图
+	Mat histImg=Mat::zeros(256,256,CV_8UC1);
+	for (int i=0;i<gray_bins;i++)
+	{
+		float binValue=hist.at<float>(i,0);
+		cout<<"binValue: "<<binValue<<endl;
+		int intensity=cvRound(binValue*255/maxValue);
+		rectangle(histImg,Point(i,256),Point(i+1,256-intensity),Scalar(255),1,8);
+
+	}
+
+	namedWindow("Histogram",1);
+	imshow("Histogram",histImg);
+	//waitKey(0);
+#endif
+
+	//计算Tc
+	double area=0;
+	double areaAll=gray.cols*gray.rows;
+	int Tc=0;
+	for (int i=0;i<gray_bins;i++)
+	{
+		float binValue=hist.at<float>(i,0);
+		area+=binValue;
+		if (area/areaAll>=0.999)
+		{
+			Tc=i;
+			break;
+		}
+	}
+
+	//当Tc小于30时，Tc取30
+	Tc=Tc>30?Tc:30;
+
+	cout<<"Tc:  "<<Tc<<endl;
+	//计算En
+	D1*=255;
+	D2*=255;
+	D3*=255;
+
+	//mask
+	Mat mask=Mat::zeros(D1.size(),CV_8UC1);
+	for (int h=0;h<D1.rows;h++)
+	{
+		for (int w=0;w<D1.cols;w++)
+		{
+			float _d1=D1.at<float>(h,w);
+			float _d2=D2.at<float>(h,w);
+			float _d3=D3.at<float>(h,w);
+			double En=sqrt(_d1*_d1+_d2*_d2+_d3*_d3);
+			if(En>Tc)
+				mask.at<uchar>(h,w)=255;
+			
+		}
+	}
+	//bitwise_not(mask,mask);
+#if 1
+	namedWindow("mask",1);
+	imshow("mask",mask);
+	waitKey();
+#endif
 	return 1;
 
 }
