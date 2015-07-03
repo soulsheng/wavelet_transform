@@ -4,7 +4,7 @@ using namespace std;
 
 using namespace cv;
 #define THID_ERR_NONE 1
-#define PATH "image4.jpg"
+#define PATH "image.jpg"
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -329,6 +329,21 @@ int main()
 	imwrite("bottom_right.jpg",D3);
 #endif
 
+	//将cv32f转换为cv8u
+	Mat ID1,ID2,ID3;
+	double min=0;
+	double max=0;
+	minMaxLoc(D1,&min,&max);
+	D1.convertTo(ID1,CV_8UC1,255.0/(max-min),-255.0/min);
+	minMaxLoc(D2,&min,&max);
+	D2.convertTo(ID2,CV_8UC1,255.0/(max-min),-255.0/min);
+	minMaxLoc(D3,&min,&max);
+	D3.convertTo(ID3,CV_8UC1,255.0/(max-min),-255.0/min);
+
+	Mat* mats=new Mat[3];
+	mats[0]=ID1;
+	mats[1]=ID2;
+	mats[2]=ID3;
 	//计算直方图
 	//将灰度划分为256级
 	int gray_bins=256;
@@ -341,10 +356,10 @@ int main()
 
 	int channels[]={0};
 
-	//计算灰度图的直方图
-	calcHist(&gray,1,channels,Mat(),hist,1,histSize,ranges,true,false);
+	//计算小波变换的直方图
+	calcHist(mats,1,channels,Mat(),hist,1,histSize,ranges,true,false);
 
-#if 0
+#if 1
 	double maxValue=0;
 	minMaxLoc(hist,0,&maxValue,0,0);
 
@@ -366,13 +381,27 @@ int main()
 
 	//计算Tc
 	double area=0;
-	double areaAll=gray.cols*gray.rows;
+	double areaAll=0;
+	//求和
+	for (int i=0;i<gray_bins;i++)
+	{
+		float binValue=hist.at<float>(i,0);
+		areaAll+=binValue;
+
+	}
+	cout<<"areaAll: "<<areaAll<<endl;
+
+	for (int i=0;i<gray_bins;i++)
+	{
+		hist.at<float>(i,0)=hist.at<float>(i,0)/areaAll;
+	}
+
 	int Tc=0;
 	for (int i=0;i<gray_bins;i++)
 	{
 		float binValue=hist.at<float>(i,0);
 		area+=binValue;
-		if (area/areaAll>=0.999)
+		if (area>=0.85)
 		{
 			Tc=i;
 			break;
@@ -384,20 +413,17 @@ int main()
 
 	cout<<"Tc:  "<<Tc<<endl;
 	//计算En
-	D1*=255;
-	D2*=255;
-	D3*=255;
-
 	//mask
 	Mat mask=Mat::zeros(D1.size(),CV_8UC1);
 	for (int h=0;h<D1.rows;h++)
 	{
 		for (int w=0;w<D1.cols;w++)
 		{
-			float _d1=D1.at<float>(h,w);
-			float _d2=D2.at<float>(h,w);
-			float _d3=D3.at<float>(h,w);
+			float _d1=ID1.at<uchar>(h,w);
+			float _d2=ID2.at<uchar>(h,w);
+			float _d3=ID3.at<uchar>(h,w);
 			double En=sqrt(_d1*_d1+_d2*_d2+_d3*_d3);
+			//cout<<"EN: "<<En<<endl;
 			if(En>Tc)
 				mask.at<uchar>(h,w)=255;
 			
@@ -409,6 +435,7 @@ int main()
 	imshow("mask",mask);
 	waitKey();
 #endif
+	delete[] mats;
 	return 1;
 
 }
