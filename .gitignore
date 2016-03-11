@@ -41,3 +41,13 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+/wavelet_transform/dwt-test/top_left.jpg
+/wavelet_transform/dwt-test/top_right.jpg
+/wavelet_transform/dwt-test/bottom_left.jpg
+/wavelet_transform/dwt-test/bottom_right.jpg
+/wavelet_transform/dwt-test/result.jpg
+/wavelet_transform/dwt-test/ipch
+/wavelet_transform/dwt-test/Debug
+/wavelet_transform/dwt-test/*.opensdf
+/wavelet_transform/dwt-test/*.sdf
+/wavelet_transform/dwt-test/*.suo
